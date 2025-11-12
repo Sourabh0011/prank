@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Will I Go To College Tomorrow?</title>
+  <style>
+    :root{
+      --bg:#0f1724; --muted:rgba(255,255,255,0.65); --accent:#7c3aed; --radius:14px; --max-width:980px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+      background: radial-gradient(1000px 600px at 10% 10%, rgba(124,58,237,0.12), transparent),
+                  radial-gradient(800px 500px at 90% 90%, rgba(6,182,212,0.08), transparent),
+                  var(--bg);
+      color:#e6eef8; display:flex; align-items:center; justify-content:center; padding:18px;
+    }
+    .shell{ width:100%; max-width:var(--max-width); margin:0 auto; }
+    .card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:calc(var(--radius)+4px); padding:18px; box-shadow:0 16px 40px rgba(2,6,23,0.6); border:1px solid rgba(255,255,255,0.04); }
+    .grid{ display:grid; grid-template-columns: 1fr 360px; gap:18px; align-items:start; }
+    .hero{ padding:8px 6px 6px 6px; }
+    h1{font-size:clamp(18px,4vw,30px); margin:0}
+    .lead{margin:6px 0 0 0; color:var(--muted); font-size:14px}
+    .top-row{display:flex; justify-content:space-between; align-items:center; gap:12px}
+    .server-status{display:inline-flex; gap:8px; align-items:center; font-size:13px; color:var(--muted)}
+    .server-dot{width:10px;height:10px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 6px rgba(255,107,107,0.2)}
+    .form{ display:flex; gap:10px; margin-top:12px; align-items:center }
+    input[type=text]{ flex:1; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); background:rgba(255,255,255,0.03); color:inherit; font-size:15px; min-width:0 }
+    input[type=text]::placeholder{ color:rgba(230,238,248,0.6) }
+    .btn{ border:0; padding:12px 14px; border-radius:12px; cursor:pointer; font-weight:700 }
+    .btn.primary{ background:linear-gradient(90deg,var(--accent),#5b21b6); color:white }
+    .btn.ghost{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted) }
+    .controls{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap }
+    .result{ margin-top:12px; padding:10px; border-radius:12px; display:flex; gap:12px; align-items:center; background:linear-gradient(90deg, rgba(255,255,255,0.012), rgba(255,255,255,0.006)); border:1px solid rgba(255,255,255,0.03) }
+    .emoji{ font-size:44px; min-width:56px; text-align:center }
+    .rtext h2{ margin:0 0 6px 0; font-size:17px }
+    .rtext p{ margin:0; color:var(--muted) }
+    .meta{ text-align:right; min-width:84px }
+    .side{ padding:8px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.014), transparent); border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; gap:10px }
+    .stat-grid{ display:flex; gap:8px }
+    .stat{ flex:1; padding:8px; background:rgba(255,255,255,0.02); border-radius:10px; text-align:center }
+    .stat .num{ font-weight:800; font-size:18px }
+    .history{ min-height:72px; max-height:160px; overflow:auto; padding:6px }
+    .chip{ display:inline-flex; gap:8px; align-items:center; background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:999px; margin:6px; font-size:13px }
+    #showStats{ display:none }
+    @media (max-width:980px){ .grid{ grid-template-columns:1fr 300px } }
+    @media (max-width:760px){
+      .grid{ grid-template-columns:1fr; }
+      .side{ order:2 }
+      .hero{ order:1 }
+      .form{ flex-direction:column; align-items:stretch }
+      input[type=text]{ width:100% }
+      .btn{ width:100% }
+      .controls{ display:flex; flex-direction:column }
+      .side{ display:none }
+      #showStats{ display:block; margin-top:10px; background:transparent; border:0; color:var(--muted); font-weight:700; text-align:left }
+    }
+    @media (max-width:420px){
+      h1{ font-size:18px }
+      .emoji{ font-size:40px }
+      .meta{ min-width:64px }
+      .history{ max-height:120px }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="card" role="main" aria-labelledby="title">
+      <div class="grid">
+        <section class="hero">
+          <div class="top-row">
+            <div>
+              <h1 id="title">Will you go to college tomorrow?</h1>
+              <!-- <div class="lead">Type a name and tap <strong>Predict</strong>. Works on phones — try it!</div> -->
+            </div>
+            <div class="server-status" title="Server connection status">
+              <div id="serverDot" class="server-dot" aria-hidden="true"></div>
+              <div id="serverText">Server: unknown</div>
+            </div>
+          </div>
+
+          <div class="form" role="form" aria-label="Predictor form">
+            <input id="nameInput" type="text" placeholder="Type name...." autocomplete="off" aria-label="Name" />
+            <button id="predictBtn" class="btn primary">Predict ✨</button>
+            <!-- <button id="surpriseBtn" class="btn ghost">I'm feeling lucky</button> -->
+          </div>
+
+          <button id="showStats" aria-expanded="false">▶ Show stats & recent</button>
+
+          <div id="resultArea" class="result" style="display:none" aria-live="polite">
+            <div class="emoji" id="resultEmoji">🤔</div>
+            <div class="rtext">
+              <h2 id="resultTitle">Title</h2>
+              <p id="resultMessage">Message</p>
+            </div>
+            <div class="meta">
+              <div style="font-size:12px; color:var(--muted)">Chance</div>
+              <div id="resultPercent" style="font-weight:800; font-size:16px">0%</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <!-- <button id="shareBtn" class="btn ghost">Copy prediction</button> -->
+            <button id="resetBtn" class="btn ghost">Reset</button>
+          </div>
+
+          <footer style="margin-top:10px; color:var(--muted); font-size:13px">Made by LimitLess</footer>
+        </section>
+
+        <aside class="side" id="sidePanel" aria-label="Stats and history">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <strong>Stats</strong>
+            <small style="color:var(--muted); font-size:12px">Built with JS</small>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat"><div class="num" id="totalRuns">0</div><div class="label" style="color:var(--muted)">Predictions</div></div>
+            <div class="stat"><div class="num" id="willGoCnt">0</div><div class="label" style="color:var(--muted)">Said: Go</div></div>
+            <div class="stat"><div class="num" id="notGoCnt">0</div><div class="label" style="color:var(--muted)">Said: No</div></div>
+          </div>
+
+          <div style="font-weight:600; color:var(--muted); font-size:13px">Recent</div>
+          <div class="history" id="history"></div>
+
+          <div style="display:flex; gap:8px; justify-content:space-between; align-items:center">
+            <!-- <small style="color:var(--muted); font-size:12px">Tip: Use 'I'm feeling lucky' for variety</small> -->
+            <button id="clearHistory" class="btn ghost">Clears</button>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </div>
+
+  <canvas id="confetti" style="position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:900" aria-hidden="true"></canvas>
+
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ===== CONFIG =====
+  const API_BASE = 'http://localhost:4000'; // <-- change to your backend origin
+  const HEALTH_PATH = '/api/health';
+  const PRED_PATH = '/api/predictions';
+  const HEALTH_POLL_MS = 20000; // ping server every 20s
+  const LS_KEY = 'some-secret-if-you-want';
+
+  // ===== SPECIAL NAMES (lowercase keys) =====
+  const SPECIAL_NAMES = {
+    'sourabh': { title: 'Sourabh — Class Captain 🔥', message: "Sourabh! Destiny says: mandatory attendance (and extra chai).", emoji: '🧑‍🏫', percent: 100 },
+    'meera':   { title: 'Meera — Chill Day ☕', message: 'Meera, the universe recommends rest and a pancake run today.', emoji: '☕', percent: 12 }
+  };
+
+  // ===== DOM helpers & refs =====
+  const $ = id => document.getElementById(id);
+  const nameInput = $('nameInput'); const predictBtn = $('predictBtn'); const surpriseBtn = $('surpriseBtn');
+  const resultArea = $('resultArea'); const resultEmoji = $('resultEmoji'); const resultTitle = $('resultTitle'); const resultMessage = $('resultMessage'); const resultPercent = $('resultPercent');
+  const shareBtn = $('shareBtn'); const resetBtn = $('resetBtn');
+  const totalRuns = $('totalRuns'); const willGoCnt = $('willGoCnt'); const notGoCnt = $('notGoCnt'); const historyEl = $('history'); const clearHistory = $('clearHistory');
+  const sidePanel = $('sidePanel'); const showStats = $('showStats');
+  const serverDot = $('serverDot'); const serverText = $('serverText');
+  const confCanvas = $('confetti');
+
+  if (!nameInput || !predictBtn) { console.warn('Essential elements missing; script aborted'); return; }
+
+  // ===== Local state =====
+  function loadLocal() { try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : { runs: [] }; } catch(e){ return { runs: [] }; } }
+  function saveLocal(s){ try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch(e){} }
+  let state = loadLocal();
+
+  // ===== hash / percent helpers =====
+  function nameHash(name) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < name.length; i++) { h ^= name.charCodeAt(i); h += (h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24); }
+    return h >>> 0;
+  }
+  function percentFor(name, extra=0) {
+    const h = (nameHash((name||'').toLowerCase()) + (extra>>>0))>>>0;
+    const val = (h ^ (h>>>13) ^ (h<<7))>>>0;
+    return val % 101;
+  }
+
+  // ===== build result (message selection) =====
+  function buildResult(name, percent) {
+    const willGo = percent >= 50;
+    const titlesGo = ['Pack your backpack!','You\\re heading in!','College: YES 🎉'];
+    const titlesNo = ['Maybe stay home','Phone a friend?','College: Nah 😴'];
+    const messagesGo = [
+      `The stars align for ${name}. Expect chai & lectures!`,
+      `Perfect day to meet friends. Don't forget your notes, ${name}!`,
+      `Professor's mood: merciful. You're going.`
+    ];
+    const messagesNo = [
+      `The snooze button has spoken. Rest up, ${name}.`,
+      `Traffic, weather or destiny? Either way: cozy day in.`,
+      `A mystery day — maybe study, maybe nap. You choose.`
+    ];
+    const emojisGo = ['🎒','📚','🎉','😄','🚶'];
+    const emojisNo = ['🛌','☕','😴','📺','🍕'];
+
+    const titleList = willGo ? titlesGo : titlesNo;
+    const messageList = willGo ? messagesGo : messagesNo;
+    const emojiList = willGo ? emojisGo : emojisNo;
+
+    return {
+      title: titleList[ percent % titleList.length ],
+      message: messageList[ percent % messageList.length ],
+      emoji: emojiList[ percent % emojiList.length ],
+      willGo
+    };
+  }
+
+  // ===== render UI =====
+  function renderStats() {
+    const runs = state.runs || [];
+    totalRuns.textContent = runs.length;
+    const goCount = runs.filter(r => r.willGo).length;
+    willGoCnt.textContent = goCount;
+    notGoCnt.textContent = runs.length - goCount;
+
+    historyEl.innerHTML = '';
+    const recent = runs.slice(-6).reverse();
+    if (recent.length === 0) {
+      historyEl.innerHTML = '<div style="color:var(--muted); font-size:13px">No predictions yet — try one!</div>';
+      return;
+    }
+    recent.forEach(r => {
+      const d = document.createElement('div');
+      d.className = 'chip';
+      d.textContent = `${r.name} — ${r.percent}% — ${r.willGo ? 'Go' : 'No'}`;
+      historyEl.appendChild(d);
+    });
+  }
+  renderStats();
+
+  // ===== server helpers =====
+  async function checkHealth() {
+    try {
+      const resp = await fetch(API_BASE + HEALTH_PATH, { method: 'GET', cache: 'no-store' });
+      if (!resp.ok) throw new Error('bad');
+      if (serverDot) serverDot.style.background = '#10b981'; // green
+      if (serverText) serverText.textContent = 'Server: online';
+      return true;
+    } catch (e) {
+      if (serverDot) serverDot.style.background = '#ff6b6b'; // red
+      if (serverText) serverText.textContent = 'Server: offline';
+      return false;
+    }
+  }
+  // start health polling
+  checkHealth();
+  setInterval(checkHealth, HEALTH_POLL_MS);
+
+  async function saveToServer(pred) {
+    try {
+      const resp = await fetch(API_BASE + PRED_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pred)
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        console.warn('Server save failed', resp.status, text);
+        return null;
+      }
+      return await resp.json();
+    } catch (e) {
+      console.warn('Save to server failed', e);
+      return null;
+    }
+  }
+
+  async function loadFromServer(limit = 30) {
+    try {
+      const resp = await fetch(API_BASE + PRED_PATH + '?limit=' + encodeURIComponent(limit), { method: 'GET', cache: 'no-store' });
+      if (!resp.ok) throw new Error('bad');
+      const j = await resp.json();
+      return j.results || [];
+    } catch (e) {
+      console.warn('Load from server failed', e);
+      return null;
+    }
+  }
+
+  // Try to populate from server first (if available)
+  (async function tryLoadServer(){
+    const srv = await loadFromServer(30);
+    if (Array.isArray(srv) && srv.length > 0) {
+      state.runs = srv.map(r => ({
+        name: r.name,
+        percent: r.percent,
+        willGo: r.willGo,
+        emoji: r.emoji || '',
+        title: r.title || '',
+        message: r.message || '',
+        time: r.createdAt ? new Date(r.createdAt).getTime() : Date.now(),
+        special: !!r.special
+      }));
+      saveLocal(state);
+      renderStats();
+    } else {
+      // keep local state
+    }
+  })();
+
+  // ===== show result and persist =====
+  function showResult(name, percent, fromSpecial=false, specialObj=null) {
+    const safeName = name || 'Friend';
+    let res;
+    if (fromSpecial && specialObj) {
+      res = {
+        title: specialObj.title || `Special for ${safeName}`,
+        message: specialObj.message || '',
+        emoji: specialObj.emoji || '✨',
+        willGo: (specialObj.percent ?? percent) >= 50
+      };
+      percent = (typeof specialObj.percent === 'number') ? specialObj.percent : percent;
+    } else {
+      res = buildResult(safeName, percent);
+    }
+
+    if (resultEmoji) resultEmoji.textContent = res.emoji;
+    if (resultTitle) resultTitle.textContent = res.title;
+    if (resultMessage) resultMessage.textContent = res.message;
+    if (resultPercent) resultPercent.textContent = percent + '%';
+    if (resultArea) resultArea.style.display = 'flex';
+
+    const entry = { name: safeName, percent, willGo: res.willGo, emoji: res.emoji, title: res.title, message: res.message, special: !!fromSpecial };
+
+    // optimistic local update
+    state.runs = state.runs || [];
+    state.runs.push(Object.assign({}, entry, { time: Date.now() }));
+    if (state.runs.length > 200) state.runs.shift();
+    saveLocal(state);
+    renderStats();
+
+    // try save to server (async)
+    saveToServer(entry).then(serverResp => {
+      if (serverResp && serverResp.ok) {
+        checkHealth(); // ping to update UI quickly
+      }
+    });
+
+    // On small screens show side panel briefly
+    if (window.innerWidth <= 760 && sidePanel && showStats) {
+      sidePanel.style.display = 'block';
+      showStats.setAttribute('aria-expanded', 'true');
+      showStats.textContent = '▾ Hide stats & recent';
+      sidePanel.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  // ===== Input validation helper =====
+  function requireNameOrAlert(rawInput) {
+    const trimmed = (rawInput || '').trim();
+    if (!trimmed) {
+      alert('Please enter a name to get a prediction — anonymous/mystery submissions are not allowed.');
+      return null;
+    }
+    return trimmed;
+  }
+
+  // ===== events =====
+  predictBtn.addEventListener('click', () => {
+    const raw = nameInput.value;
+    const name = requireNameOrAlert(raw);
+    if (!name) return; // stop if empty
+    const lower = name.toLowerCase();
+    if (SPECIAL_NAMES.hasOwnProperty(lower)) {
+      showResult(name, SPECIAL_NAMES[lower].percent ?? 0, true, SPECIAL_NAMES[lower]);
+      return;
+    }
+    const percent = percentFor(name, 0);
+    showResult(name, percent);
+  });
+
+  if (surpriseBtn) {
+    surpriseBtn.addEventListener('click', () => {
+      const raw = nameInput.value;
+      const name = requireNameOrAlert(raw);
+      if (!name) return; // stop if empty
+      const lower = name.toLowerCase();
+      if (SPECIAL_NAMES.hasOwnProperty(lower)) {
+        showResult(name, SPECIAL_NAMES[lower].percent ?? 0, true, SPECIAL_NAMES[lower]);
+        return;
+      }
+      const percent = percentFor(name, Math.floor(Math.random() * 1000));
+      showResult(name, percent);
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (resultArea) resultArea.style.display = 'none';
+      if (nameInput) nameInput.value = '';
+    });
+  }
+
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      if (!resultArea || resultArea.style.display === 'none') {
+        alert('Make a prediction first!');
+        return;
+      }
+      const text = `${resultTitle?.textContent || ''}\n${resultMessage?.textContent || ''}\nChance: ${resultPercent?.textContent || ''}`;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          const original = shareBtn.textContent;
+          shareBtn.textContent = 'Copied!';
+          setTimeout(() => { shareBtn.textContent = original; }, 1200);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          const original = shareBtn.textContent;
+          shareBtn.textContent = 'Copied!';
+          setTimeout(() => { shareBtn.textContent = original; }, 1200);
+        }
+      } catch (e) {
+        alert('Copy failed — your browser may block clipboard access.');
+      }
+    });
+  }
+
+  if (clearHistory) {
+    clearHistory.addEventListener('click', async () => {
+      if (!confirm('Clear all local history? (This does not delete server records)')) return;
+      state.runs = [];
+      saveLocal(state);
+      renderStats();
+    });
+  }
+
+  if (showStats && sidePanel) {
+    showStats.addEventListener('click', () => {
+      const hidden = getComputedStyle(sidePanel).display === 'none';
+      sidePanel.style.display = hidden ? 'block' : 'none';
+      showStats.setAttribute('aria-expanded', hidden ? 'true' : 'false');
+      showStats.textContent = hidden ? '▾ Hide stats & recent' : '▶ Show stats & recent';
+      if (hidden) sidePanel.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  // allow Enter to submit (requires name)
+  nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); predictBtn.click(); } });
+
+  // ===== confetti (lightweight) =====
+  let ctx = null; let pieces = [];
+  if (confCanvas && confCanvas.getContext) {
+    ctx = confCanvas.getContext('2d');
+    function resizeCanvas(){ if(!ctx) return; confCanvas.width = innerWidth; confCanvas.height = innerHeight; }
+    addEventListener('resize', resizeCanvas); resizeCanvas();
+    function rand(a,b){ return a + Math.random()*(b-a); }
+    function launchConfetti(){
+      if(!ctx) return; if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const small = window.innerWidth < 520; const count = small? 24:60;
+      for(let i=0;i<count;i++){ pieces.push({ x: rand(0,confCanvas.width), y: rand(-confCanvas.height*0.3,0), vx: rand(-1.2,1.2), vy: rand(0.8,3.2), rot: rand(0,360), vr: rand(-8,8), size: rand(6,12), color: ['#7c3aed','#06b6d4','#f97316','#ef4444','#10b981'][Math.floor(Math.random()*5)] }); }
+    }
+    function draw(){ if(!ctx) return; ctx.clearRect(0,0,confCanvas.width,confCanvas.height); for(let i=pieces.length-1;i>=0;i--){ const p = pieces[i]; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr*0.02; p.vy+=0.06; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle = p.color; ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6); ctx.restore(); if(p.y>confCanvas.height+40) pieces.splice(i,1); } requestAnimationFrame(draw); } requestAnimationFrame(draw);
+  }
+
+}); // DOMContentLoaded
+</script>
+
+</body>
+</html>
